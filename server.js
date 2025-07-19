@@ -66,7 +66,10 @@ app.post("/admin/create", upload.single("bgPhoto"), (req, res) => {
     };
     s3.upload(bgParams, (err, data) => {
       fs.unlinkSync(req.file.path);
-      if (err) return res.status(500).send("Background upload error");
+      if (err) {
+        console.error("S3 Upload Error:", err); // Logs the full error to the server log
+        return res.status(500).send("Background upload error: " + err.message); // Shows the real AWS error in the browser
+      }
       bgPhotoUrl = data.Location;
 
       // Save event
@@ -178,7 +181,7 @@ app.post("/event/:eventId/upload", upload.single("file"), (req, res) => {
   };
   s3.upload(params, (err, data) => {
     fs.unlinkSync(req.file.path);
-    if (err) return res.status(500).send("Upload failed");
+    if (err) return res.status(500).send("Upload failed: " + err.message);
     res.send(`
       <h2>Thank you! Upload successful.</h2>
       <a href="/event/${eventId}">Upload another</a>
