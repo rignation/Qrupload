@@ -55,15 +55,15 @@ app.post("/admin/create", upload.single("bgPhoto"), (req, res) => {
   if (password !== process.env.ADMIN_PASSWORD) return res.status(403).send("Invalid password.");
   if (!eventName || !eventDate || !eventPlace) return res.status(400).send("Missing fields.");
 
-  // Upload background photo to S3 (make it public-read)
+  // Upload background photo to S3 (بدون ACL)
   let bgPhotoUrl = "";
   if (req.file) {
     const bgParams = {
       Bucket: process.env.S3_BUCKET_NAME,
       Key: `backgrounds/${uuidv4()}_${req.file.originalname}`,
       Body: fs.createReadStream(req.file.path),
-      ContentType: req.file.mimetype,
-      ACL: 'public-read' // <== مهم: يجعل الصورة متاحة للكل!
+      ContentType: req.file.mimetype
+      // لا تضف ACL هنا
     };
     s3.upload(bgParams, (err, data) => {
       fs.unlinkSync(req.file.path);
