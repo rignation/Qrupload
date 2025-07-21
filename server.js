@@ -55,20 +55,21 @@ app.post("/admin/create", upload.single("bgPhoto"), (req, res) => {
   if (password !== process.env.ADMIN_PASSWORD) return res.status(403).send("Invalid password.");
   if (!eventName || !eventDate || !eventPlace) return res.status(400).send("Missing fields.");
 
-  // Upload background photo to S3
+  // Upload background photo to S3 (make it public-read)
   let bgPhotoUrl = "";
   if (req.file) {
     const bgParams = {
       Bucket: process.env.S3_BUCKET_NAME,
       Key: `backgrounds/${uuidv4()}_${req.file.originalname}`,
       Body: fs.createReadStream(req.file.path),
-      ContentType: req.file.mimetype
+      ContentType: req.file.mimetype,
+      ACL: 'public-read' // <== مهم: يجعل الصورة متاحة للكل!
     };
     s3.upload(bgParams, (err, data) => {
       fs.unlinkSync(req.file.path);
       if (err) {
-        console.error("S3 Upload Error:", err); // Logs the full error to the server log
-        return res.status(500).send("Background upload error: " + err.message); // Shows the real AWS error in the browser
+        console.error("S3 Upload Error:", err);
+        return res.status(500).send("Background upload error: " + err.message);
       }
       bgPhotoUrl = data.Location;
 
@@ -148,16 +149,57 @@ app.get("/event/:eventId", (req, res) => {
     <html>
     <head>
       <title>Upload for ${event.name}</title>
+      <link href="https://fonts.googleapis.com/css?family=Cairo:700|Tajawal:400,700&display=swap" rel="stylesheet">
       <style>
-        body { background-image: url('${event.bg}'); background-size: cover; color: #fff; text-align: center; }
-        .form-box { background: rgba(0,0,0,0.7); padding: 30px; margin: 60px auto; border-radius: 12px; max-width: 380px; }
-        input, button { padding: 8px; border-radius: 5px; margin: 8px 0; }
+        body {
+          background-image: url('${event.bg}');
+          background-size: cover;
+          color: #fff;
+          text-align: center;
+          font-family: 'Tajawal', 'Cairo', Arial, sans-serif;
+        }
+        .form-box {
+          background: rgba(0,0,0,0.7);
+          padding: 30px;
+          margin: 60px auto;
+          border-radius: 16px;
+          max-width: 390px;
+          box-shadow: 0 4px 16px #0004;
+        }
+        h2 {
+          font-family: 'Cairo', Arial, sans-serif;
+          font-size: 2.1em;
+          margin-bottom: 12px;
+        }
+        input, button {
+          padding: 12px;
+          border-radius: 8px;
+          margin: 8px 0;
+          border: none;
+          width: 94%;
+          font-size: 1.1em;
+        }
+        button {
+          background: #fa3b77;
+          color: #fff;
+          font-weight: bold;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        button:hover {
+          background: #d2155c;
+        }
+        .event-place {
+          font-size: 1em;
+          margin-bottom: 18px;
+          color: #ffd2e6;
+        }
       </style>
     </head>
     <body>
       <div class="form-box">
         <h2>${event.name}</h2>
-        <div>${event.date} | ${event.place}</div>
+        <div class="event-place">${event.date} | ${event.place}</div>
         <form action="/event/${event.id}/upload" method="POST" enctype="multipart/form-data">
           <input type="file" name="file" required accept="image/*,video/*" /><br/>
           <button type="submit">Upload</button>
